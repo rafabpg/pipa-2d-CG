@@ -1,7 +1,7 @@
 import vertShaderSrc from "./pipa.vert.js";
 import fragShaderSrc from "./pipa.frag.js";
 import WebGPU from "./lib/webgpu.js";
-import { createIdentityMat4 } from "./lib/utils.js";
+import { createIdentityMat4, createTranslationMat4 } from "./lib/utils.js";
 
 class Scene {
   constructor(gpu) {
@@ -11,7 +11,15 @@ class Scene {
 
     this.kite = gpu.createShape(this.createKite(), 6);
 
+    this.tail1 = gpu.createShape(this.createTail(), 3);
+    this.tail2 = gpu.createShape(this.createTail(), 3);
+
     this.kiteUniform = gpu.createUniform(this.program, createIdentityMat4());
+    this.tail1Uniform = gpu.createUniform(this.program, createIdentityMat4());
+    this.tail2Uniform = gpu.createUniform(
+      this.program,
+      createTranslationMat4(0.095, -0.155, 0),
+    );
   }
 
   createKite() {
@@ -30,7 +38,21 @@ class Scene {
     return [positions, colors];
   }
 
+  createTail() {
+    const positions = [
+      0.0, 0.0, 0.5, 1.0, 0.03, -0.19, 0.5, 1.0, 0.16, -0.12, 0.5, 1.0,
+    ];
+
+    const orange = [1.0, 0.5, 0.15, 1.0];
+
+    const colors = [...orange, ...orange, ...orange];
+
+    return [positions, colors];
+  }
+
   draw(gpu) {
+    gpu.draw(this.program, this.tail2, [this.tail2Uniform.bindGroup]);
+    gpu.draw(this.program, this.tail1, [this.tail1Uniform.bindGroup]);
     gpu.draw(this.program, this.kite, [this.kiteUniform.bindGroup]);
   }
 }
