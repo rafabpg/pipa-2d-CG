@@ -4,6 +4,7 @@ import WebGPU from "./lib/webgpu.js";
 import {
   createIdentityMat4,
   createLookAtMat4,
+  createOrthoMat4,
   createRotationZMat4,
   createTranslationMat4,
   multiplyMat4,
@@ -132,13 +133,24 @@ class Scene {
     return createLookAtMat4(eye, at, up);
   }
 
+  createProjectionMatrix() {
+    const aspect = 1024 / 768;
+
+    return createOrthoMat4(-aspect, aspect, -1, 1, 0.1, 10);
+  }
+
   draw(gpu) {
     this.updateTransform();
     const view = this.createViewMatrix();
+    const projection = this.createProjectionMatrix();
 
-    this.kiteUniform.data.set(multiplyMat4(view, this.kiteModel));
-    this.tail1Uniform.data.set(multiplyMat4(view, this.tail1Model));
-    this.tail2Uniform.data.set(multiplyMat4(view, this.tail2Model));
+    const kiteModelView = multiplyMat4(view, this.kiteModel);
+    const tail1ModelView = multiplyMat4(view, this.tail1Model);
+    const tail2ModelView = multiplyMat4(view, this.tail2Model);
+
+    this.kiteUniform.data.set(multiplyMat4(projection, kiteModelView));
+    this.tail1Uniform.data.set(multiplyMat4(projection, tail1ModelView));
+    this.tail2Uniform.data.set(multiplyMat4(projection, tail2ModelView));
 
     gpu.writeBuffer(this.kiteUniform.buffer, this.kiteUniform.data);
     gpu.writeBuffer(this.tail1Uniform.buffer, this.tail1Uniform.data);
