@@ -3,6 +3,7 @@ import fragShaderSrc from "./pipa.frag.js";
 import WebGPU from "./lib/webgpu.js";
 import {
   createIdentityMat4,
+  createLookAtMat4,
   createRotationZMat4,
   createTranslationMat4,
   multiplyMat4,
@@ -86,7 +87,7 @@ class Scene {
     model = multiplyMat4(rotateZ, model);
     model = multiplyMat4(translate, model);
 
-    this.kiteUniform.data.set(model);
+    this.kiteModel = model;
 
     this.tail1Angle += 0.02 * this.tail1Direction;
 
@@ -101,7 +102,7 @@ class Scene {
     tail1Model = multiplyMat4(rotateTail1, tail1Model);
     tail1Model = multiplyMat4(model, tail1Model);
 
-    this.tail1Uniform.data.set(tail1Model);
+    this.tail1Model = tail1Model;
 
     this.tail2Angle += 0.03 * this.tail2Direction;
 
@@ -118,11 +119,27 @@ class Scene {
     tail2Model = multiplyMat4(attachTail2, tail2Model);
     tail2Model = multiplyMat4(tail1Model, tail2Model);
 
-    this.tail2Uniform.data.set(tail2Model);
+    this.tail2Model = tail2Model;
+  }
+
+  createViewMatrix() {
+    const cameraY = 0.5 * this.kiteY;
+
+    const eye = [0, cameraY, 0.0];
+    const at = [0, cameraY, 0.5];
+    const up = [0, 1, 0];
+
+    return createLookAtMat4(eye, at, up);
   }
 
   draw(gpu) {
     this.updateTransform();
+    const view = this.createViewMatrix();
+
+    this.kiteUniform.data.set(multiplyMat4(view, this.kiteModel));
+    this.tail1Uniform.data.set(multiplyMat4(view, this.tail1Model));
+    this.tail2Uniform.data.set(multiplyMat4(view, this.tail2Model));
+
     gpu.writeBuffer(this.kiteUniform.buffer, this.kiteUniform.data);
     gpu.writeBuffer(this.tail1Uniform.buffer, this.tail1Uniform.data);
     gpu.writeBuffer(this.tail2Uniform.buffer, this.tail2Uniform.data);
