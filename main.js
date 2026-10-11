@@ -16,6 +16,12 @@ class Scene {
     this.kiteAngle = 0;
     this.kiteAngleDirection = 1;
 
+    this.tail1Angle = 0;
+    this.tail1Direction = 1;
+
+    this.tail2Angle = 0;
+    this.tail2Direction = -1;
+
     this.program = gpu.createProgram(vertShaderSrc, fragShaderSrc, {
       cullMode: "back",
     });
@@ -27,10 +33,7 @@ class Scene {
 
     this.kiteUniform = gpu.createUniform(this.program, createIdentityMat4());
     this.tail1Uniform = gpu.createUniform(this.program, createIdentityMat4());
-    this.tail2Uniform = gpu.createUniform(
-      this.program,
-      createTranslationMat4(0.095, -0.155, 0),
-    );
+    this.tail2Uniform = gpu.createUniform(this.program, createIdentityMat4());
   }
 
   createKite() {
@@ -84,11 +87,45 @@ class Scene {
     model = multiplyMat4(translate, model);
 
     this.kiteUniform.data.set(model);
+
+    this.tail1Angle += 0.02 * this.tail1Direction;
+
+    if (this.tail1Angle >= 0.35 || this.tail1Angle <= -0.35) {
+      this.tail1Angle = Math.max(-0.35, Math.min(0.35, this.tail1Angle));
+      this.tail1Direction *= -1;
+    }
+
+    const rotateTail1 = createRotationZMat4(this.tail1Angle);
+
+    let tail1Model = createIdentityMat4();
+    tail1Model = multiplyMat4(rotateTail1, tail1Model);
+    tail1Model = multiplyMat4(model, tail1Model);
+
+    this.tail1Uniform.data.set(tail1Model);
+
+    this.tail2Angle += 0.03 * this.tail2Direction;
+
+    if (this.tail2Angle >= 0.5 || this.tail2Angle <= -0.5) {
+      this.tail2Angle = Math.max(-0.5, Math.min(0.5, this.tail2Angle));
+      this.tail2Direction *= -1;
+    }
+
+    const rotateTail2 = createRotationZMat4(this.tail2Angle);
+    const attachTail2 = createTranslationMat4(0.095, -0.155, 0);
+
+    let tail2Model = createIdentityMat4();
+    tail2Model = multiplyMat4(rotateTail2, tail2Model);
+    tail2Model = multiplyMat4(attachTail2, tail2Model);
+    tail2Model = multiplyMat4(tail1Model, tail2Model);
+
+    this.tail2Uniform.data.set(tail2Model);
   }
 
   draw(gpu) {
     this.updateTransform();
     gpu.writeBuffer(this.kiteUniform.buffer, this.kiteUniform.data);
+    gpu.writeBuffer(this.tail1Uniform.buffer, this.tail1Uniform.data);
+    gpu.writeBuffer(this.tail2Uniform.buffer, this.tail2Uniform.data);
 
     gpu.draw(this.program, this.tail2, [this.tail2Uniform.bindGroup]);
     gpu.draw(this.program, this.tail1, [this.tail1Uniform.bindGroup]);
