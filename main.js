@@ -1,15 +1,38 @@
 import vertShaderSrc from "./pipa.vert.js";
 import fragShaderSrc from "./pipa.frag.js";
 import WebGPU from "./lib/webgpu.js";
+import { createIdentityMat4 } from "./lib/utils.js";
 
 class Scene {
   constructor(gpu) {
     this.program = gpu.createProgram(vertShaderSrc, fragShaderSrc, {
       cullMode: "back",
     });
+
+    this.kite = gpu.createShape(this.createKite(), 6);
+
+    this.kiteUniform = gpu.createUniform(this.program, createIdentityMat4());
   }
 
-  draw(gpu) {}
+  createKite() {
+    const top = [0.0, 0.75, 0.5, 1.0];
+    const left = [-0.3, 0.45, 0.5, 1.0];
+    const right = [0.3, 0.45, 0.5, 1.0];
+    const bottom = [0.0, 0.0, 0.5, 1.0];
+
+    const positions = [...top, ...left, ...bottom, ...top, ...bottom, ...right];
+
+    const red = [0.93, 0.11, 0.14, 1.0];
+    const yellow = [1.0, 0.85, 0.18, 1.0];
+
+    const colors = [...red, ...red, ...red, ...yellow, ...yellow, ...yellow];
+
+    return [positions, colors];
+  }
+
+  draw(gpu) {
+    gpu.draw(this.program, this.kite, [this.kiteUniform.bindGroup]);
+  }
 }
 
 class Main {
