@@ -1,10 +1,21 @@
 import vertShaderSrc from "./pipa.vert.js";
 import fragShaderSrc from "./pipa.frag.js";
 import WebGPU from "./lib/webgpu.js";
-import { createIdentityMat4, createTranslationMat4 } from "./lib/utils.js";
+import {
+  createIdentityMat4,
+  createRotationZMat4,
+  createTranslationMat4,
+  multiplyMat4,
+} from "./lib/utils.js";
 
 class Scene {
   constructor(gpu) {
+    this.kiteY = -0.3;
+    this.kiteDirection = 1;
+
+    this.kiteAngle = 0;
+    this.kiteAngleDirection = 1;
+
     this.program = gpu.createProgram(vertShaderSrc, fragShaderSrc, {
       cullMode: "back",
     });
@@ -50,7 +61,35 @@ class Scene {
     return [positions, colors];
   }
 
+  updateTransform() {
+    this.kiteY += 0.005 * this.kiteDirection;
+
+    if (this.kiteY >= 0.2 || this.kiteY <= -0.8) {
+      this.kiteY = Math.max(-0.8, Math.min(0.2, this.kiteY));
+      this.kiteDirection *= -1;
+    }
+
+    this.kiteAngle += 0.002 * this.kiteAngleDirection;
+
+    if (this.kiteAngle >= 0.15 || this.kiteAngle <= -0.15) {
+      this.kiteAngle = Math.max(-0.15, Math.min(0.15, this.kiteAngle));
+      this.kiteAngleDirection *= -1;
+    }
+
+    const rotateZ = createRotationZMat4(this.kiteAngle);
+    const translate = createTranslationMat4(0, this.kiteY, 0);
+
+    let model = createIdentityMat4();
+    model = multiplyMat4(rotateZ, model);
+    model = multiplyMat4(translate, model);
+
+    this.kiteUniform.data.set(model);
+  }
+
   draw(gpu) {
+    this.updateTransform();
+    gpu.writeBuffer(this.kiteUniform.buffer, this.kiteUniform.data);
+
     gpu.draw(this.program, this.tail2, [this.tail2Uniform.bindGroup]);
     gpu.draw(this.program, this.tail1, [this.tail1Uniform.bindGroup]);
     gpu.draw(this.program, this.kite, [this.kiteUniform.bindGroup]);
